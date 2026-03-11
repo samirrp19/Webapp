@@ -265,7 +265,7 @@ pipeline {
                               --document-name "AWS-RunShellScript" \
                               --comment "Install Docker and AWS CLI on Ubuntu EC2" \
                               --parameters 'commands=[
-                                "set -euxo pipefail",
+                                "set -eux",
                                 "sudo apt-get update -y",
                                 "sudo apt-get install -y docker.io unzip curl",
                                 "curl \\"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\\" -o \\"awscliv2.zip\\"",
@@ -347,7 +347,7 @@ pipeline {
                               --document-name "AWS-RunShellScript" \
                               --comment "Login to ECR pull image and run container" \
                               --parameters 'commands=[
-                                "set -euxo pipefail",
+                                "set -eux",
                                 "aws ecr get-login-password --region '"${AWS_REGION}"' | sudo docker login --username AWS --password-stdin '"${ECR_REGISTRY}"'",
                                 "sudo docker rm -f '"${CONTAINER_NAME}"' || true",
                                 "sudo docker pull '"${ECR_IMAGE_URI}"'",
