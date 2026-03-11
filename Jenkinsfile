@@ -22,7 +22,6 @@ pipeline {
         INSTANCE_TYPE         = 't2.micro'
 
         KEY_PAIR_NAME         = 'samir-demo-ec2-key'
-        PEM_FILE_PATH         = '/home/samrash/.ssh/samir-demo-ec2-key.pem'
 
         UBUNTU_SSM_PARAM      = '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
 
@@ -50,8 +49,6 @@ pipeline {
                     /usr/bin/trivy --version
                     aws --version
                     aws sts get-caller-identity --region ${AWS_REGION}
-                    test -f "${PEM_FILE_PATH}"
-                    ls -l "${PEM_FILE_PATH}"
                 '''
             }
         }
@@ -416,21 +413,10 @@ pipeline {
             }
         }
 
-        stage('Prepare SSH Access Info') {
-            steps {
-                sh '''
-                    set -e
-                    chmod 400 "${PEM_FILE_PATH}" || true
-                    echo "SSH command:"
-                    echo "ssh -i ${PEM_FILE_PATH} ubuntu@${INSTANCE_PUBLIC_IP}"
-                '''
-            }
-        }
-
-        stage('Show Application URL') {
+        stage('Show Access Info') {
             steps {
                 echo "Application should be reachable at: http://${env.INSTANCE_PUBLIC_IP}:${env.HOST_PORT}"
-                echo "SSH access command: ssh -i ${env.PEM_FILE_PATH} ubuntu@${env.INSTANCE_PUBLIC_IP}"
+                echo "SSH command: ssh -i samir-demo-ec2-key.pem ubuntu@${env.INSTANCE_PUBLIC_IP}"
             }
         }
     }
@@ -444,7 +430,7 @@ pipeline {
             echo "ECR image: ${env.ECR_IMAGE_URI}"
             echo "EC2 instance: ${env.INSTANCE_ID}"
             echo "App URL: http://${env.INSTANCE_PUBLIC_IP}:${env.HOST_PORT}"
-            echo "SSH: ssh -i ${env.PEM_FILE_PATH} ubuntu@${env.INSTANCE_PUBLIC_IP}"
+            echo "SSH: ssh -i samir-demo-ec2-key.pem ubuntu@${env.INSTANCE_PUBLIC_IP}"
         }
         failure {
             echo "Pipeline failed. Check stage logs."
