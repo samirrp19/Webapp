@@ -7,7 +7,8 @@ pipeline {
 
         LOCAL_IMAGE_NAME      = 'php-webapp-image'
         LOCAL_IMAGE_TAG       = 'latest'
-        ECR_REPOSITORY        = 'poc/demo'
+
+        ECR_REPOSITORY        = 'webapp-demo'
         ECR_IMAGE_TAG         = "build-${BUILD_NUMBER}"
         ECR_REGISTRY          = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         ECR_IMAGE_URI         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${ECR_IMAGE_TAG}"
@@ -17,8 +18,6 @@ pipeline {
         CONTAINER_PORT        = '80'
 
         INSTANCE_PROFILE_NAME = 'EC2-SSM-Profile'
-        IAM_ROLE_NAME         = 'EC2-SSM-Role'
-        SECURITY_GROUP_NAME   = 'jenkins-ec2-web-sg'
         INSTANCE_NAME         = 'jenkins-php-webapp'
         INSTANCE_TYPE         = 't2.micro'
 
@@ -27,6 +26,10 @@ pipeline {
         SONAR_PROJECT_KEY     = 'php-webapp'
         SONAR_PROJECT_NAME    = 'php-webapp'
         SONAR_SOURCES         = '.'
+
+        VPC_ID                = 'vpc-0bbcd6bfd0a21ce09'
+        SUBNET_ID             = 'subnet-0d2d7bcd16a9ef6c3'
+        SECURITY_GROUP_ID     = 'sg-0ae95a03ba22b71b8'
     }
 
     options {
@@ -134,31 +137,9 @@ pipeline {
             }
         }
 
-        stage('Prepare Network and AMI') {
+        stage('Resolve AMI') {
             steps {
                 script {
-                    env.VPC_ID = sh(
-                        script: '''
-                            aws ec2 describe-vpcs \
-                              --filters "Name=isDefault,Values=true" \
-                              --region "${AWS_REGION}" \
-                              --query "Vpcs[0].VpcId" \
-                              --output text
-                        ''',
-                        returnStdout: true
-                    ).trim()
-
-                    env.SUBNET_ID = sh(
-                        script: '''
-                            aws ec2 describe-subnets \
-                              --filters "Name=vpc-id,Values=${VPC_ID}" "Name=default-for-az,Values=true" \
-                              --region "${AWS_REGION}" \
-                              --query "Subnets[0].SubnetId" \
-                              --output text
-                        ''',
-                        returnStdout: true
-                    ).trim()
-
                     env.AMI_ID = sh(
                         script: '''
                             aws ssm get-parameter \
@@ -170,79 +151,15 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "VPC_ID=${env.VPC_ID}"
-                    echo "SUBNET_ID=${env.SUBNET_ID}"
-                    echo "AMI_ID=${env.AMI_ID}"
+                    if (!env.AMI_ID || env.AMI_ID == 'None') {
+                        error("Could not resolve Ubuntu AMI from SSM parameter")
+                    }
+
+                    echo "Using VPC_ID=${env.VPC_ID}"
+                    echo "Using SUBNET_ID=${env.SUBNET_ID}"
+                    echo "Using SECURITY_GROUP_ID=${env.SECURITY_GROUP_ID}"
+                    echo "Using AMI_ID=${env.AMI_ID}"
                 }
-            }
-        }
-
-        stage('Create or Reuse Security Group') {
-            steps {
-                script {
-                    env.SECURITY_GROUP_ID = sh(
-                        script: '''
-                            SG_ID=$(aws ec2 describe-security-groups \
-                              --filters "Name=group-name,Values=${SECURITY_GROUP_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
-                              --region "${AWS_REGION}" \
-                              --query "SecurityGroups[0].GroupId" \
-                              --output text)
-
-                            if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
-                              SG_ID=$(aws ec2 create-security-group \
-                                --group-name "${SECURITY_GROUP_NAME}" \
-                                --description "Security group for Jenkins deployed PHP webapp" \
-                                --vpc-id "${VPC_ID}" \
-                                --region "${AWS_REGION}" \
-                                --query "GroupId" \
-                                --output text)
-                            fi
-
-                            echo "$SG_ID"
-                        ''',
-                        returnStdout: true
-                    ).trim()
-
-                    echo "SECURITY_GROUP_ID=${env.SECURITY_GROUP_ID}"
-                }
-            }
-        }
-
-        stage('Authorize Security Group Rules') {
-            steps {
-                sh '''
-                    set +e
-
-                    aws ec2 authorize-security-group-ingress \
-                      --group-id "${SECURITY_GROUP_ID}" \
-                      --protocol tcp \
-                      --port 22 \
-                      --cidr 0.0.0.0/0 \
-                      --region "${AWS_REGION}"
-
-                    aws ec2 authorize-security-group-ingress \
-                      --group-id "${SECURITY_GROUP_ID}" \
-                      --protocol tcp \
-                      --port "${HOST_PORT}" \
-                      --cidr 0.0.0.0/0 \
-                      --region "${AWS_REGION}"
-
-                    aws ec2 authorize-security-group-ingress \
-                      --group-id "${SECURITY_GROUP_ID}" \
-                      --protocol tcp \
-                      --port 80 \
-                      --cidr 0.0.0.0/0 \
-                      --region "${AWS_REGION}"
-
-                    aws ec2 authorize-security-group-ingress \
-                      --group-id "${SECURITY_GROUP_ID}" \
-                      --protocol tcp \
-                      --port 443 \
-                      --cidr 0.0.0.0/0 \
-                      --region "${AWS_REGION}"
-
-                    true
-                '''
             }
         }
 
