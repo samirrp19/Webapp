@@ -21,6 +21,9 @@ pipeline {
         INSTANCE_NAME         = 'jenkins-php-webapp'
         INSTANCE_TYPE         = 't2.micro'
 
+        KEY_PAIR_NAME         = 'samir-demo-ec2-key'
+        PEM_FILE_PATH         = '/home/samrash/.ssh/samir-demo-ec2-key.pem'
+
         UBUNTU_SSM_PARAM      = '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
 
         SONAR_PROJECT_KEY     = 'php-webapp'
@@ -47,6 +50,21 @@ pipeline {
                     /usr/bin/trivy --version
                     aws --version
                     aws sts get-caller-identity --region ${AWS_REGION}
+                    test -f "${PEM_FILE_PATH}"
+                    ls -l "${PEM_FILE_PATH}"
+                '''
+            }
+        }
+
+        stage('Validate EC2 Key Pair') {
+            steps {
+                sh '''
+                    set -e
+                    aws ec2 describe-key-pairs \
+                      --key-names "${KEY_PAIR_NAME}" \
+                      --region "${AWS_REGION}" \
+                      --query "KeyPairs[0].KeyName" \
+                      --output text
                 '''
             }
         }
@@ -158,6 +176,7 @@ pipeline {
                     echo "Using VPC_ID=${env.VPC_ID}"
                     echo "Using SUBNET_ID=${env.SUBNET_ID}"
                     echo "Using SECURITY_GROUP_ID=${env.SECURITY_GROUP_ID}"
+                    echo "Using KEY_PAIR_NAME=${env.KEY_PAIR_NAME}"
                     echo "Using AMI_ID=${env.AMI_ID}"
                 }
             }
@@ -175,6 +194,7 @@ pipeline {
                               --security-group-ids "${SECURITY_GROUP_ID}" \
                               --subnet-id "${SUBNET_ID}" \
                               --associate-public-ip-address \
+                              --key-name "${KEY_PAIR_NAME}" \
                               --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${INSTANCE_NAME}}]" \
                               --region "${AWS_REGION}" \
                               --query "Instances[0].InstanceId" \
@@ -239,30 +259,28 @@ pipeline {
             }
         }
 
-        stage('Install Docker on EC2 Through SSM') {
+        stage('Install Docker and AWS CLI on EC2 Through SSM') {
             steps {
                 script {
-                    env.SSM_DOCKER_COMMAND_ID = sh(
+                    env.SSM_SETUP_COMMAND_ID = sh(
                         script: '''
                             aws ssm send-command \
                               --region "${AWS_REGION}" \
                               --instance-ids "${INSTANCE_ID}" \
                               --document-name "AWS-RunShellScript" \
-                              --comment "Install Docker on Ubuntu EC2" \
+                              --comment "Install Docker and AWS CLI on Ubuntu EC2" \
                               --parameters 'commands=[
-                                "set -e",
+                                "set -euxo pipefail",
                                 "sudo apt-get update -y",
-                                "sudo apt-get install -y ca-certificates curl gnupg lsb-release",
-                                "sudo install -m 0755 -d /etc/apt/keyrings",
-                                "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
-                                "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
-                                "echo \\"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable\\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-                                "sudo apt-get update -y",
-                                "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
+                                "sudo apt-get install -y docker.io unzip curl",
+                                "curl \\"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\\" -o \\"awscliv2.zip\\"",
+                                "unzip -o awscliv2.zip",
+                                "sudo ./aws/install --update",
                                 "sudo systemctl enable docker",
                                 "sudo systemctl start docker",
                                 "sudo usermod -aG docker ubuntu || true",
-                                "sudo docker --version"
+                                "docker --version",
+                                "aws --version"
                               ]' \
                               --query "Command.CommandId" \
                               --output text
@@ -270,25 +288,54 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "SSM_DOCKER_COMMAND_ID=${env.SSM_DOCKER_COMMAND_ID}"
+                    echo "SSM_SETUP_COMMAND_ID=${env.SSM_SETUP_COMMAND_ID}"
                 }
 
-                sh '''
-                    set -e
-                    aws ssm wait command-executed \
-                      --region "${AWS_REGION}" \
-                      --command-id "${SSM_DOCKER_COMMAND_ID}" \
-                      --instance-id "${INSTANCE_ID}"
-                '''
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitUntil {
+                        def currentStatus = sh(
+                            script: '''
+                                aws ssm get-command-invocation \
+                                  --region "${AWS_REGION}" \
+                                  --command-id "${SSM_SETUP_COMMAND_ID}" \
+                                  --instance-id "${INSTANCE_ID}" \
+                                  --query "Status" \
+                                  --output text
+                            ''',
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Setup SSM status: ${currentStatus}"
+                        return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                    }
+                }
 
                 sh '''
                     aws ssm get-command-invocation \
                       --region "${AWS_REGION}" \
-                      --command-id "${SSM_DOCKER_COMMAND_ID}" \
+                      --command-id "${SSM_SETUP_COMMAND_ID}" \
                       --instance-id "${INSTANCE_ID}" \
                       --query "[Status,StandardOutputContent,StandardErrorContent]" \
                       --output text
                 '''
+
+                script {
+                    def finalStatus = sh(
+                        script: '''
+                            aws ssm get-command-invocation \
+                              --region "${AWS_REGION}" \
+                              --command-id "${SSM_SETUP_COMMAND_ID}" \
+                              --instance-id "${INSTANCE_ID}" \
+                              --query "Status" \
+                              --output text
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    if (finalStatus != 'Success') {
+                        error("EC2 setup failed. Check StandardErrorContent above.")
+                    }
+                }
             }
         }
 
@@ -303,7 +350,7 @@ pipeline {
                               --document-name "AWS-RunShellScript" \
                               --comment "Login to ECR pull image and run container" \
                               --parameters 'commands=[
-                                "set -e",
+                                "set -euxo pipefail",
                                 "aws ecr get-login-password --region '"${AWS_REGION}"' | sudo docker login --username AWS --password-stdin '"${ECR_REGISTRY}"'",
                                 "sudo docker rm -f '"${CONTAINER_NAME}"' || true",
                                 "sudo docker pull '"${ECR_IMAGE_URI}"'",
@@ -319,13 +366,24 @@ pipeline {
                     echo "SSM_DEPLOY_COMMAND_ID=${env.SSM_DEPLOY_COMMAND_ID}"
                 }
 
-                sh '''
-                    set -e
-                    aws ssm wait command-executed \
-                      --region "${AWS_REGION}" \
-                      --command-id "${SSM_DEPLOY_COMMAND_ID}" \
-                      --instance-id "${INSTANCE_ID}"
-                '''
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitUntil {
+                        def currentStatus = sh(
+                            script: '''
+                                aws ssm get-command-invocation \
+                                  --region "${AWS_REGION}" \
+                                  --command-id "${SSM_DEPLOY_COMMAND_ID}" \
+                                  --instance-id "${INSTANCE_ID}" \
+                                  --query "Status" \
+                                  --output text
+                            ''',
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Deploy SSM status: ${currentStatus}"
+                        return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                    }
+                }
 
                 sh '''
                     aws ssm get-command-invocation \
@@ -335,12 +393,42 @@ pipeline {
                       --query "[Status,StandardOutputContent,StandardErrorContent]" \
                       --output text
                 '''
+
+                script {
+                    def finalStatus = sh(
+                        script: '''
+                            aws ssm get-command-invocation \
+                              --region "${AWS_REGION}" \
+                              --command-id "${SSM_DEPLOY_COMMAND_ID}" \
+                              --instance-id "${INSTANCE_ID}" \
+                              --query "Status" \
+                              --output text
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    if (finalStatus != 'Success') {
+                        error("Container deployment failed via SSM. Check StandardErrorContent above.")
+                    }
+                }
+            }
+        }
+
+        stage('Prepare SSH Access Info') {
+            steps {
+                sh '''
+                    set -e
+                    chmod 400 "${PEM_FILE_PATH}" || true
+                    echo "SSH command:"
+                    echo "ssh -i ${PEM_FILE_PATH} ubuntu@${INSTANCE_PUBLIC_IP}"
+                '''
             }
         }
 
         stage('Show Application URL') {
             steps {
                 echo "Application should be reachable at: http://${env.INSTANCE_PUBLIC_IP}:${env.HOST_PORT}"
+                echo "SSH access command: ssh -i ${env.PEM_FILE_PATH} ubuntu@${env.INSTANCE_PUBLIC_IP}"
             }
         }
     }
@@ -354,6 +442,7 @@ pipeline {
             echo "ECR image: ${env.ECR_IMAGE_URI}"
             echo "EC2 instance: ${env.INSTANCE_ID}"
             echo "App URL: http://${env.INSTANCE_PUBLIC_IP}:${env.HOST_PORT}"
+            echo "SSH: ssh -i ${env.PEM_FILE_PATH} ubuntu@${env.INSTANCE_PUBLIC_IP}"
         }
         failure {
             echo "Pipeline failed. Check stage logs."
