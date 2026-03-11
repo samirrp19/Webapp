@@ -27,11 +27,6 @@ pipeline {
         SONAR_SOURCES         = '.'
     }
 
-    tools {
-        // must match the name configured in Global Tool Configuration
-        sonarQube 'SonarScanner'
-    }
-
     options {
         timestamps()
         disableConcurrentBuilds()
@@ -53,15 +48,19 @@ pipeline {
 
         stage('SonarQube Code Scan') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        set -e
-                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName=${SONAR_PROJECT_NAME} \
-                          -Dsonar.sources=${SONAR_SOURCES} \
-                          -Dsonar.exclusions=vendor/**,node_modules/**,tmp/**,logs/**
-                    '''
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            set -e
+                            ${scannerHome}/bin/sonar-scanner \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                              -Dsonar.sources=${SONAR_SOURCES} \
+                              -Dsonar.exclusions=vendor/**,node_modules/**,tmp/**,logs/**
+                        """
+                    }
                 }
             }
         }
