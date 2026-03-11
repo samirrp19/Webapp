@@ -32,21 +32,19 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    stages {
+stage('Precheck Tools') {
+    steps {
+        sh '''
+            set -e
+            docker --version
+            /usr/bin/trivy --version
+            aws --version
+            aws sts get-caller-identity --region ${AWS_REGION}
+        '''
+    }
+}
 
-        stage('Precheck Tools') {
-            steps {
-                sh '''
-                    set -e
-                    docker --version
-                    trivy --version
-                    aws --version
-                    aws sts get-caller-identity --region ${AWS_REGION}
-                '''
-            }
-        }
-
-        stage('Build Docker Image') {
+    stage('Build Docker Image') {
             steps {
                 sh '''
                     set -e
@@ -57,13 +55,13 @@ pipeline {
         }
 
         stage('Trivy Scan') {
-            steps {
-                sh '''
-                    set -e
-                    trivy image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${LOCAL_IMAGE_NAME}:${LOCAL_IMAGE_TAG}
-                '''
-            }
-        }
+    steps {
+        sh '''
+            set -e
+            /usr/bin/trivy image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${LOCAL_IMAGE_NAME}:${LOCAL_IMAGE_TAG}
+        '''
+    }
+}
 
         stage('Ensure Default VPC') {
             steps {
