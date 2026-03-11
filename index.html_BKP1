@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samirs | Cloud & DevOps Solutions</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial, Helvetica, sans-serif;
+background:#f5f7fb;
+color:#333;
+}
+
+header{
+background:#0b3d91;
+color:white;
+padding:20px 0;
+}
+
+.container{
+width:90%;
+max-width:1100px;
+margin:auto;
+}
+
+nav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+nav h1{
+margin:0;
+}
+
+nav ul{
+list-style:none;
+display:flex;
+gap:20px;
+padding:0;
+margin:0;
+}
+
+nav a{
+color:white;
+text-decoration:none;
+font-weight:bold;
+}
+
+.hero{
+background:linear-gradient(120deg,#0b3d91,#1f77ff);
+color:white;
+padding:80px 20px;
+text-align:center;
+}
+
+.hero h2{
+font-size:40px;
+margin-bottom:20px;
+}
+
+.hero p{
+font-size:18px;
+margin-bottom:30px;
+}
+
+.btn{
+background:white;
+color:#0b3d91;
+padding:12px 25px;
+border-radius:5px;
+text-decoration:none;
+font-weight:bold;
+}
+
+.section{
+padding:60px 20px;
+}
+
+.section h2{
+text-align:center;
+margin-bottom:40px;
+}
+
+.features{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:30px;
+}
+
+.card{
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 5px 15px rgba(0,0,0,0.08);
+text-align:center;
+}
+
+.card h3{
+margin-bottom:15px;
+color:#0b3d91;
+}
+
+.cta{
+background:#0b3d91;
+color:white;
+text-align:center;
+padding:60px 20px;
+}
+
+footer{
+background:#222;
+color:white;
+text-align:center;
+padding:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="container">
+<nav>
+<h1>Samirs</h1>
+<ul>
+<li><a href="#">Home</a></li>
+<li><a href="#">Services</a></li>
+<li><a href="#">Solutions</a></li>
+<li><a href="#">Contact</a></li>
+</ul>
+</nav>
+</div>
+</header>
+
+<section class="hero">
+<h2>Cloud, DevOps & AI Solutions</h2>
+<p>Helping businesses build scalable, secure, and modern cloud platforms.</p>
+<a class="btn" href="#">Get Started</a>
+</section>
+
+<section class="section">
+<h2>Our Services</h2>
+
+<div class="features">
+
+<div class="card">
+<h3>Cloud Architecture</h3>
+<p>Design scalable infrastructure on AWS, Azure and GCP for modern applications.</p>
+</div>
+
+<div class="card">
+<h3>DevOps Automation</h3>
+<p>CI/CD pipelines, containerization, Kubernetes and infrastructure automation.</p>
+</div>
+
+<div class="card">
+<h3>Security & DevSecOps</h3>
+<p>Application security scanning, compliance automation and runtime protection.</p>
+</div>
+
+<div class="card">
+<h3>AI Platforms</h3>
+<p>Build intelligent applications using modern AI frameworks and cloud services.</p>
+</div>
+
+</div>
+
+</section>
+
+<section class="cta">
+<h2>Ready to transform your business?</h2>
+<p>Let us help you modernize your infrastructure and accelerate innovation.</p>
+<a class="btn" href="#">Contact Us</a>
+</section>
+
+<footer>
+<p>© 2026 samirs.co.in | All Rights Reserved</p>
+</footer>
+
+</body>
+</html>

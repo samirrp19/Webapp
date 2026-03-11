@@ -1,0 +1,74 @@
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require __DIR__ . '/vendor/autoload.php';
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
+    exit("Method Not Allowed");
+}
+
+$name  = trim($_POST['name'] ?? '');
+$phone = trim($_POST['phone'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$query = trim($_POST['query'] ?? '');
+
+if ($name === '' || $phone === '' || $email === '' || $query === '') {
+    exit("All fields are required.");
+}
+
+$mail = new PHPMailer(true);
+
+try {
+    $mail->isSMTP();
+    $mail->Host       = 'smtp.gmail.com';
+    $mail->SMTPAuth   = true;
+    $mail->Username   = 'samir.rp19@gmail.com';      // your Gmail
+    $mail->Password   = 'jbnrcpfwcbctzsrs';   // replace this
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = 587;
+
+    $mail->setFrom('samir.rp19@gmail.com', 'samirs.co.in Contact Form');
+    $mail->addAddress('samir.rp19@gmail.com');
+    $mail->addReplyTo($email, $name);
+
+    $mail->isHTML(true);
+    $mail->Subject = 'New Contact Form Submission - samirs.co.in';
+
+    $mail->Body = "
+        <h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>
+        <p><strong>Contact Number:</strong> " . htmlspecialchars($phone) . "</p>
+        <p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
+        <p><strong>Query:</strong><br>" . nl2br(htmlspecialchars($query)) . "</p>
+    ";
+
+    $mail->AltBody = "New Contact Form Submission\n\n"
+        . "Name: $name\n"
+        . "Contact Number: $phone\n"
+        . "Email: $email\n"
+        . "Query:\n$query\n";
+
+    $mail->send();
+
+    echo "<!DOCTYPE html>
+    <html><head><title>Message Sent</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+      body{font-family:Arial,sans-serif;background:#f5f7fb;text-align:center;padding:60px;}
+      .box{max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+      a{display:inline-block;margin-top:20px;text-decoration:none;background:#0b3d91;color:#fff;padding:12px 20px;border-radius:6px;}
+    </style></head>
+    <body>
+      <div class='box'>
+        <h2>Thank you!</h2>
+        <p>Your message has been sent successfully.</p>
+        <a href='index.html'>Go Back</a>
+      </div>
+    </body></html>";
+
+} catch (Exception $e) {
+    echo "Message could not be sent. Mailer Error: " . htmlspecialchars($mail->ErrorInfo);
+}
+?>

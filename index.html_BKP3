@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samirs | Cloud & DevOps Solutions</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="container">
+    <nav>
+      <h1>Samirs</h1>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <h2>Cloud, DevOps & AI Solutions</h2>
+  <p>Helping businesses build scalable, secure, and modern cloud platforms.</p>
+  <a class="btn" href="#contact">Get Started</a>
+</section>
+
+<section class="section" id="services">
+  <h2>Our Services</h2>
+
+  <div class="features">
+    <div class="card">
+      <h3>Cloud Architecture</h3>
+      <p>Design scalable infrastructure on AWS, Azure and GCP for modern applications.</p>
+    </div>
+
+    <div class="card">
+      <h3>DevOps Automation</h3>
+      <p>CI/CD pipelines, containerization, Kubernetes and infrastructure automation.</p>
+    </div>
+
+    <div class="card">
+      <h3>Security & DevSecOps</h3>
+      <p>Application security scanning, compliance automation and runtime protection.</p>
+    </div>
+
+    <div class="card">
+      <h3>AI Platforms</h3>
+      <p>Build intelligent applications using modern AI frameworks and cloud services.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="contact">
+  <h2>Contact Us</h2>
+
+  <form class="contact-form" action="contact.php" method="POST">
+    <input type="text" name="name" placeholder="Your Name" required>
+    <input type="text" name="phone" placeholder="Contact Number" required>
+    <input type="email" name="email" placeholder="Email Address" required>
+    <textarea name="query" placeholder="Your Query" required></textarea>
+    <button type="submit" class="btn">Send Message</button>
+  </form>
+</section>
+
+<section class="cta">
+  <h2>Ready to transform your business?</h2>
+  <p>Let us help you modernize your infrastructure and accelerate innovation.</p>
+  <a class="btn" href="#contact">Contact Us</a>
+</section>
+
+<footer>
+  <p>© 2026 samirs.co.in | All Rights Reserved</p>
+</footer>
+
+<a
+  class="whatsapp-chat"
+  href="https://wa.me/918431444460?text=Hello%20Samir%2C%20I%20want%20to%20know%20more%20about%20your%20services."
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Chat on WhatsApp"
+>
+  <span class="whatsapp-label">Chat with us</span>
+  <span class="whatsapp-button">
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M19.11 17.21c-.27-.14-1.58-.78-1.82-.87-.24-.09-.42-.14-.6.14-.18.27-.69.87-.84 1.05-.16.18-.31.2-.58.07-.27-.14-1.13-.42-2.15-1.35-.8-.71-1.34-1.59-1.5-1.86-.16-.27-.02-.42.12-.55.12-.12.27-.31.4-.47.13-.16.18-.27.27-.45.09-.18.04-.34-.02-.47-.07-.14-.6-1.45-.82-1.98-.22-.53-.44-.45-.6-.46h-.51c-.18 0-.47.07-.71.34-.24.27-.93.91-.93 2.22s.96 2.57 1.09 2.75c.13.18 1.88 2.87 4.55 4.03.64.27 1.14.43 1.53.55.64.2 1.22.17 1.68.1.51-.08 1.58-.65 1.8-1.28.22-.63.22-1.18.16-1.28-.07-.11-.24-.18-.51-.32z"/>
+      <path d="M16.01 3.2c-7.08 0-12.83 5.74-12.83 12.82 0 2.25.59 4.46 1.71 6.41L3 29l6.75-1.77a12.77 12.77 0 0 0 6.25 1.59h.01c7.07 0 12.82-5.75 12.82-12.82 0-3.43-1.34-6.65-3.76-9.07A12.74 12.74 0 0 0 16.01 3.2zm0 23.47h-.01a10.6 10.6 0 0 1-5.41-1.49l-.39-.23-4 .05 1.07-3.9-.25-.4a10.66 10.66 0 1 1 8.99 5.97z"/>
+    </svg>
+  </span>
+</a>
+
+</body>
+</html>
