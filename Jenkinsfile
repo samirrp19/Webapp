@@ -73,7 +73,6 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'SonarScanner'
-
                     withSonarQubeEnv('SonarQube') {
                         sh """
                             set -e
@@ -119,7 +118,6 @@ pipeline {
             steps {
                 sh '''
                     set -e
-
                     aws ecr describe-repositories \
                       --repository-names "${ECR_REPOSITORY}" \
                       --region "${AWS_REGION}" >/dev/null 2>&1 || \
@@ -293,20 +291,22 @@ pipeline {
 
                 timeout(time: 10, unit: 'MINUTES') {
                     waitUntil {
-                        def currentStatus = sh(
-                            script: '''
-                                aws ssm get-command-invocation \
-                                  --region "${AWS_REGION}" \
-                                  --command-id "${SSM_SETUP_COMMAND_ID}" \
-                                  --instance-id "${INSTANCE_ID}" \
-                                  --query "Status" \
-                                  --output text
-                            ''',
-                            returnStdout: true
-                        ).trim()
+                        script {
+                            def currentStatus = sh(
+                                script: '''
+                                    aws ssm get-command-invocation \
+                                      --region "${AWS_REGION}" \
+                                      --command-id "${SSM_SETUP_COMMAND_ID}" \
+                                      --instance-id "${INSTANCE_ID}" \
+                                      --query "Status" \
+                                      --output text
+                                ''',
+                                returnStdout: true
+                            ).trim()
 
-                        echo "Setup SSM status: ${currentStatus}"
-                        return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                            echo "Setup SSM status: ${currentStatus}"
+                            return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                        }
                     }
                 }
 
@@ -368,20 +368,22 @@ pipeline {
 
                 timeout(time: 10, unit: 'MINUTES') {
                     waitUntil {
-                        def currentStatus = sh(
-                            script: '''
-                                aws ssm get-command-invocation \
-                                  --region "${AWS_REGION}" \
-                                  --command-id "${SSM_DEPLOY_COMMAND_ID}" \
-                                  --instance-id "${INSTANCE_ID}" \
-                                  --query "Status" \
-                                  --output text
-                            ''',
-                            returnStdout: true
-                        ).trim()
+                        script {
+                            def currentStatus = sh(
+                                script: '''
+                                    aws ssm get-command-invocation \
+                                      --region "${AWS_REGION}" \
+                                      --command-id "${SSM_DEPLOY_COMMAND_ID}" \
+                                      --instance-id "${INSTANCE_ID}" \
+                                      --query "Status" \
+                                      --output text
+                                ''',
+                                returnStdout: true
+                            ).trim()
 
-                        echo "Deploy SSM status: ${currentStatus}"
-                        return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                            echo "Deploy SSM status: ${currentStatus}"
+                            return ["Success", "Failed", "Cancelled", "TimedOut"].contains(currentStatus)
+                        }
                     }
                 }
 
