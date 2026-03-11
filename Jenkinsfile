@@ -2,29 +2,29 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION              = 'us-east-1'
-        AWS_ACCOUNT_ID          = '179968400330'
+        AWS_REGION            = 'us-east-1'
+        AWS_ACCOUNT_ID        = '179968400330'
 
         // App / image
-        LOCAL_IMAGE_NAME        = 'php-webapp-image'
-        LOCAL_IMAGE_TAG         = 'latest'
-        ECR_REPOSITORY          = 'poc/demo'
-        ECR_IMAGE_TAG           = "build-${env.BUILD_NUMBER}"
+        LOCAL_IMAGE_NAME      = 'php-webapp-image'
+        LOCAL_IMAGE_TAG       = 'latest'
+        ECR_REPOSITORY        = 'poc/demo'
+        ECR_IMAGE_TAG         = "build-${BUILD_NUMBER}"
 
         // Container runtime on EC2
-        CONTAINER_NAME          = 'php-webapp-container'
-        HOST_PORT               = '8085'
-        CONTAINER_PORT          = '80'
+        CONTAINER_NAME        = 'php-webapp-container'
+        HOST_PORT             = '8085'
+        CONTAINER_PORT        = '80'
 
         // Infra names
-        INSTANCE_PROFILE_NAME   = 'EC2-SSM-Profile'
-        IAM_ROLE_NAME           = 'EC2-SSM-Role'
-        SECURITY_GROUP_NAME     = 'jenkins-ec2-web-sg'
-        INSTANCE_NAME           = 'jenkins-php-webapp'
-        INSTANCE_TYPE           = 't2.micro'
+        INSTANCE_PROFILE_NAME = 'EC2-SSM-Profile'
+        IAM_ROLE_NAME         = 'EC2-SSM-Role'
+        SECURITY_GROUP_NAME   = 'jenkins-ec2-web-sg'
+        INSTANCE_NAME         = 'jenkins-php-webapp'
+        INSTANCE_TYPE         = 't2.micro'
 
         // Ubuntu 22.04 LTS official AMI parameter from Canonical
-        UBUNTU_SSM_PARAM        = '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
+        UBUNTU_SSM_PARAM      = '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
     }
 
     options {
@@ -32,19 +32,21 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-stage('Precheck Tools') {
-    steps {
-        sh '''
-            set -e
-            docker --version
-            /usr/bin/trivy --version
-            aws --version
-            aws sts get-caller-identity --region ${AWS_REGION}
-        '''
-    }
-}
+    stages {
 
-    stage('Build Docker Image') {
+        stage('Precheck Tools') {
+            steps {
+                sh '''
+                    set -e
+                    docker --version
+                    /usr/bin/trivy --version
+                    aws --version
+                    aws sts get-caller-identity --region ${AWS_REGION}
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
             steps {
                 sh '''
                     set -e
@@ -55,13 +57,13 @@ stage('Precheck Tools') {
         }
 
         stage('Trivy Scan') {
-    steps {
-        sh '''
-            set -e
-            /usr/bin/trivy image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${LOCAL_IMAGE_NAME}:${LOCAL_IMAGE_TAG}
-        '''
-    }
-}
+            steps {
+                sh '''
+                    set -e
+                    /usr/bin/trivy image --severity HIGH,CRITICAL --exit-code 1 --no-progress ${LOCAL_IMAGE_NAME}:${LOCAL_IMAGE_TAG}
+                '''
+            }
+        }
 
         stage('Ensure Default VPC') {
             steps {
@@ -387,7 +389,7 @@ stage('Precheck Tools') {
                     docker tag ${LOCAL_IMAGE_NAME}:${LOCAL_IMAGE_TAG} ${ECR_URI}:${ECR_IMAGE_TAG}
                     docker push ${ECR_URI}:${ECR_IMAGE_TAG}
 
-                    echo "ECR_URI=${ECR_URI}" >> infra.env
+                    echo "ECR_URI=$ECR_URI" >> infra.env
                 '''
                 script {
                     def props = readProperties file: 'infra.env'
@@ -402,28 +404,28 @@ stage('Precheck Tools') {
                     set -euo pipefail
 
                     cat > deploy-commands.json <<EOF
-                    {
-                      "commands": [
-                        "set -euxo pipefail",
-                        "sudo apt-get update -y",
-                        "sudo apt-get install -y ca-certificates curl gnupg lsb-release",
-                        "sudo install -m 0755 -d /etc/apt/keyrings",
-                        "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
-                        "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
-                        "echo \\"deb [arch=\\\\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \\\\\\$(. /etc/os-release && echo \\\\\\$VERSION_CODENAME) stable\\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-                        "sudo apt-get update -y",
-                        "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin awscli",
-                        "sudo systemctl enable docker",
-                        "sudo systemctl start docker",
-                        "aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com",
-                        "sudo docker rm -f ${CONTAINER_NAME} || true",
-                        "sudo docker pull ${ECR_URI}:${ECR_IMAGE_TAG}",
-                        "sudo docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} --restart unless-stopped ${ECR_URI}:${ECR_IMAGE_TAG}",
-                        "sudo docker ps",
-                        "curl -I http://localhost:${HOST_PORT} || true"
-                      ]
-                    }
-                    EOF
+{
+  "commands": [
+    "set -euxo pipefail",
+    "sudo apt-get update -y",
+    "sudo apt-get install -y ca-certificates curl gnupg lsb-release",
+    "sudo install -m 0755 -d /etc/apt/keyrings",
+    "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+    "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
+    "echo \\"deb [arch=\\\\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \\\\\\$(. /etc/os-release && echo \\\\\\$VERSION_CODENAME) stable\\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+    "sudo apt-get update -y",
+    "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin awscli",
+    "sudo systemctl enable docker",
+    "sudo systemctl start docker",
+    "aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com",
+    "sudo docker rm -f ${CONTAINER_NAME} || true",
+    "sudo docker pull ${ECR_URI}:${ECR_IMAGE_TAG}",
+    "sudo docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} --restart unless-stopped ${ECR_URI}:${ECR_IMAGE_TAG}",
+    "sudo docker ps",
+    "curl -I http://localhost:${HOST_PORT} || true"
+  ]
+}
+EOF
 
                     COMMAND_ID=$(aws ssm send-command \
                       --instance-ids ${INSTANCE_ID} \
@@ -475,14 +477,14 @@ stage('Precheck Tools') {
                     echo "http://${PUBLIC_IP}:${HOST_PORT}"
 
                     cat > verify-commands.json <<EOF
-                    {
-                      "commands": [
-                        "set -euxo pipefail",
-                        "sudo docker ps",
-                        "curl -I http://localhost:${HOST_PORT}"
-                      ]
-                    }
-                    EOF
+{
+  "commands": [
+    "set -euxo pipefail",
+    "sudo docker ps",
+    "curl -I http://localhost:${HOST_PORT}"
+  ]
+}
+EOF
 
                     VERIFY_ID=$(aws ssm send-command \
                       --instance-ids ${INSTANCE_ID} \
